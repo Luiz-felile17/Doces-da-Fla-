@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -31,7 +32,6 @@
 
   <!-- VISÃO DO CLIENTE (LOJA) -->
   <main id="store-view">
-    <!-- Banner de Apresentação -->
     <section class="hero">
       <div class="container">
         <span class="badge-hero">Retirada em Marechal Hermes</span>
@@ -61,8 +61,9 @@
     </section>
   </main>
 
-  <!-- VISÃO ADMINISTRATIVA (PAINEL DO DONO) -->
+  <!-- VISÃO ADMINISTRATIVA -->
   <section id="admin-view" class="container hidden">
+
     <!-- Tela de Login -->
     <div id="admin-login-box" class="card auth-box">
       <h2>Área Administrativa</h2>
@@ -110,11 +111,7 @@
         </div>
       </div>
 
-      <!-- Abas do Painel -->
-            </div>
-          </div>
-
-      <!-- Registrar venda por fora -->
+      <!-- BOTÃO DE REGISTRAR VENDA POR FORA -->
       <div style="margin: 20px 0;">
         <button class="btn-primary" onclick="registrarVendaPorFora()">
           + Registrar venda por fora
@@ -122,10 +119,6 @@
       </div>
 
       <!-- Abas do Painel -->
-      <div class="admin-tabs">
-
-      <!-- Abas do Painel -->
-      <div class="admin-tabs">
       <div class="admin-tabs">
         <button class="tab-btn active" onclick="switchAdminTab('orders', this)">📋 Pedidos</button>
         <button class="tab-btn" onclick="switchAdminTab('products', this)">🧁 Produtos & Promoções</button>
@@ -216,7 +209,7 @@
     </div>
   </section>
 
-  <!-- CARRINHO LATERAL (DRAWER) -->
+  <!-- CARRINHO LATERAL -->
   <div id="cart-drawer" class="drawer hidden">
     <div class="drawer-content">
       <div class="drawer-header">
@@ -249,14 +242,12 @@
       <span class="badge-success">Pedido Registrado!</span>
       <h3>Resumo & Pagamento</h3>
       <p id="order-confirm-msg"></p>
-      
       <div id="pix-payment-box" class="pix-box">
         <p><strong>Escaneie o QR Code ou copie o código PIX:</strong></p>
         <div id="qrcode-container"></div>
         <textarea id="pix-copy-text" readonly rows="3"></textarea>
         <button class="btn-secondary full-width" onclick="copyPixCode()">📋 Copiar Código PIX</button>
       </div>
-
       <a id="whatsapp-confirm-btn" href="#" target="_blank" class="btn-whatsapp full-width">
         💬 Enviar Pedido / Comprovante no WhatsApp
       </a>
