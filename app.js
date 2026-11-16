@@ -47,11 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadSettings();
   await loadProducts();
-  checkSession();
-}
-  }
-                          
- // ==========================================
+  await checkSession();
+});
+
+// ==========================================
 // 4. SISTEMA DE LOGOTIPO
 // ==========================================
 
@@ -80,7 +79,7 @@ function applyStoreLogo(logoUrl = null) {
   };
 
   logo.src = logoUrl || defaultLogo;
-}     
+}
 
 // ==========================================
 // 5. CARREGAMENTO DAS CONFIGURAÇÕES
@@ -107,17 +106,15 @@ async function loadSettings() {
 
     applyStoreLogo(data.logo_url);
 
-    document.getElementById('set-pix').value =
-      data.pix_code || '';
+    const pix = document.getElementById('set-pix');
+    const whatsapp = document.getElementById('set-whatsapp');
+    const address = document.getElementById('set-address');
+    const hours = document.getElementById('set-hours');
 
-    document.getElementById('set-whatsapp').value =
-      data.whatsapp || '';
-
-    document.getElementById('set-address').value =
-      data.address || '';
-
-    document.getElementById('set-hours').value =
-      data.hours || '';
+    if (pix) pix.value = data.pix_code || '';
+    if (whatsapp) whatsapp.value = data.whatsapp || '';
+    if (address) address.value = data.address || '';
+    if (hours) hours.value = data.hours || '';
   }
 }
 
@@ -154,24 +151,27 @@ function setCategory(cat, btnElement) {
     b.classList.remove('active');
   });
 
-  btnElement.classList.add('active');
+  if (btnElement) {
+    btnElement.classList.add('active');
+  }
 
   filterProducts();
 }
 
 function filterProducts() {
-  const term = document
-    .getElementById('search-input')
-    .value.toLowerCase();
+  const searchInput = document.getElementById('search-input');
+
+  const term = searchInput
+    ? searchInput.value.toLowerCase()
+    : '';
 
   const filtered = allProducts.filter(p => {
     if (!p.is_active) return false;
 
     const matchesSearch =
-      p.name.toLowerCase().includes(term) ||
-      p.category.toLowerCase().includes(term) ||
-      (p.description &&
-        p.description.toLowerCase().includes(term));
+      (p.name || '').toLowerCase().includes(term) ||
+      (p.category || '').toLowerCase().includes(term) ||
+      (p.description || '').toLowerCase().includes(term);
 
     if (currentCategory === 'Todos') {
       return matchesSearch;
@@ -182,7 +182,7 @@ function filterProducts() {
     }
 
     return matchesSearch &&
-      p.category.toLowerCase() === currentCategory.toLowerCase();
+      (p.category || '').toLowerCase() === currentCategory.toLowerCase();
   });
 
   renderProducts(filtered);
@@ -190,6 +190,8 @@ function filterProducts() {
 
 function renderProducts(list = allProducts.filter(p => p.is_active)) {
   const grid = document.getElementById('products-grid');
+
+  if (!grid) return;
 
   if (list.length === 0) {
     grid.innerHTML =
@@ -299,12 +301,18 @@ function updateCartUI() {
     0
   );
 
-  document.getElementById('cart-count').innerText = count;
-
-  document.getElementById('cart-total').innerText =
-    `R$ ${total.toFixed(2).replace('.', ',')}`;
-
+  const countElement = document.getElementById('cart-count');
+  const totalElement = document.getElementById('cart-total');
   const container = document.getElementById('cart-items');
+
+  if (countElement) countElement.innerText = count;
+
+  if (totalElement) {
+    totalElement.innerText =
+      `R$ ${total.toFixed(2).replace('.', ',')}`;
+  }
+
+  if (!container) return;
 
   if (cart.length === 0) {
     container.innerHTML =
@@ -332,6 +340,8 @@ function updateCartUI() {
 
 function toggleCart(forceOpen = null) {
   const drawer = document.getElementById('cart-drawer');
+
+  if (!drawer) return;
 
   if (forceOpen === true) {
     drawer.classList.remove('hidden');
@@ -645,7 +655,7 @@ async function loadAdminData() {
         revMonth += Number(o.total_amount);
       }
 
-      o.items.forEach(i => {
+      (o.items || []).forEach(i => {
         itemCounter[i.name] =
           (itemCounter[i.name] || 0) + i.qty;
       });
@@ -723,7 +733,7 @@ async function loadAdminData() {
         </div>
 
         <p style="margin:8px 0;">
-          ${o.items.map(i =>
+          ${(o.items || []).map(i =>
             `• ${i.qty}x ${i.name}`
           ).join('<br>')}
         </p>
@@ -745,6 +755,7 @@ async function loadAdminData() {
           <a
             href="https://wa.me/${o.customer_phone.startsWith('55') ? o.customer_phone : '55' + o.customer_phone}?text=${encodeURIComponent(`Olá ${o.customer_name}! Aqui é da Doces da Fla. O status do seu pedido agora é: *${o.status}*.`)}"
             target="_blank"
+            rel="noopener noreferrer"
             class="btn-secondary"
           >
             Avisar no WhatsApp
@@ -1016,6 +1027,8 @@ function renderAdminProducts() {
   const container =
     document.getElementById('admin-products-list');
 
+  if (!container) return;
+
   container.innerHTML = allProducts.map(p => `
     <div class="admin-prod-item">
       <div>
@@ -1102,3 +1115,4 @@ async function saveSettings(e) {
 
   alert('Configurações atualizadas com sucesso!');
 }
+
