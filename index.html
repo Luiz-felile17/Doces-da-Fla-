@@ -8,6 +8,23 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    .logo-img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
 
@@ -15,12 +32,19 @@
   <header class="header">
     <div class="container header-content">
       <div class="brand" onclick="showView('store')">
-        <img id="header-logo" src="IMG-20261114-WA0029.jpg" alt="Logo Doces da Fla" class="logo-img" onerror="this.style.display='none'">
+        <img
+          id="header-logo"
+          src="logo.png"
+          alt="Logo Doces da Fla"
+          class="logo-img"
+          onerror="this.style.display='none'"
+        >
         <div>
           <h1>Doces da Fla</h1>
           <span class="subtitle">Um carinho em forma de doce</span>
         </div>
       </div>
+
       <div class="header-actions">
         <button class="btn-icon" onclick="openTrackModal()" title="Acompanhar Pedido">📦 Meus Pedidos</button>
         <button class="btn-cart" onclick="toggleCart()">
