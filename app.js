@@ -48,31 +48,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
   await loadProducts();
   checkSession();
-});
-
-// ==========================================
+}
+  }
+                          
+ // ==========================================
 // 4. SISTEMA DE LOGOTIPO
 // ==========================================
 
 function applyStoreLogo(logoUrl = null) {
   const logo = document.getElementById('header-logo');
 
-  if (!logo) return;
+  if (!logo) {
+    console.error('Elemento header-logo não encontrado no HTML.');
+    return;
+  }
 
-  const defaultLogo = 'logo.png';
+  const defaultLogo = './logo.png';
 
   logo.onerror = function () {
-    if (this.src.endsWith(defaultLogo)) {
-      this.style.display = 'none';
-      return;
-    }
+    console.error('Não foi possível carregar o logotipo:', this.src);
 
-    this.src = defaultLogo;
+    if (this.src !== new URL(defaultLogo, window.location.href).href) {
+      this.src = defaultLogo;
+    } else {
+      this.style.display = 'none';
+    }
   };
 
-  logo.style.display = 'block';
+  logo.onload = function () {
+    this.style.display = 'block';
+  };
+
   logo.src = logoUrl || defaultLogo;
-}
+}     
 
 // ==========================================
 // 5. CARREGAMENTO DAS CONFIGURAÇÕES
@@ -110,8 +118,6 @@ async function loadSettings() {
 
     document.getElementById('set-hours').value =
       data.hours || '';
-  } else {
-    applyStoreLogo();
   }
 }
 
