@@ -439,6 +439,53 @@ async function updateOrderStatus(orderId, newStatus) {
 }
 
 // ==========================================
+// REGISTRAR VENDA FEITA POR FORA
+// ==========================================
+async function registrarVendaPorFora() {
+  const valorTexto = prompt("Qual o valor da venda? (Ex: 25,50)");
+
+  if (!valorTexto) return;
+
+  const valor = Number(valorTexto.replace(",", "."));
+
+  if (!Number.isFinite(valor) || valor <= 0) {
+    alert("Digite um valor válido.");
+    return;
+  }
+
+  const descricao = prompt("Qual doce ou nome do cliente?") || "Venda por fora";
+
+  const { error } = await supabaseClient
+    .from('orders')
+    .insert([{
+      customer_name: `${descricao} (Por fora)`,
+      customer_phone: '00000000000',
+      items: [{
+        name: descricao,
+        qty: 1,
+        price: valor
+      }],
+      total_amount: valor,
+      payment_method: 'Externo',
+      notes: 'Venda registrada manualmente',
+      status: 'Entregue'
+    }]);
+
+  if (error) {
+    console.error("Erro ao registrar venda:", error);
+    alert("Erro ao salvar venda: " + error.message);
+    return;
+  }
+
+  alert(
+    `Venda de R$ ${valor.toFixed(2).replace(".", ",")} registrada!`
+  );
+
+  await loadAdminData();
+}
+
+
+// ==========================================
 // 7. GESTÃO DE PRODUTOS E CONFIGURAÇÕES
 // ==========================================
 async function uploadImage(file) {
