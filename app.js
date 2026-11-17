@@ -1,9 +1,16 @@
 
 // ==========================================
+// DOCES DA FLA - SISTEMA COMPLETO
+// SUPABASE + LOJA + WHATSAPP + PIX + ADMIN
+// ==========================================
+
+
+// ==========================================
 // 1. CONFIGURAÇÃO DO SUPABASE
 // ==========================================
 
 const SUPABASE_URL = 'https://vgbywfzrggecsbafwwej.supabase.co';
+
 const SUPABASE_ANON_KEY = 'sb_publishable_Pav2SleitVosooTmwu0vJw_PdYH78mZ';
 
 const supabaseClient = window.supabase.createClient(
@@ -11,8 +18,9 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_ANON_KEY
 );
 
+
 // ==========================================
-// 2. ESTADO GLOBAL DA APLICAÇÃO
+// 2. ESTADO GLOBAL
 // ==========================================
 
 let allProducts = [];
@@ -37,41 +45,78 @@ const ORDER_STATUSES = [
   'Cancelado'
 ];
 
+
 // ==========================================
-// 3. INICIALIZAÇÃO
+// 3. FUNÇÕES AUXILIARES
+// ==========================================
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
+}
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
+
+function normalizeWhatsApp(number) {
+  let phone = String(number || '').replace(/\D/g, '');
+
+  if (phone && !phone.startsWith('55')) {
+    phone = '55' + phone;
+  }
+
+  return phone;
+}
+
+
+// ==========================================
+// 4. INICIALIZAÇÃO
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+
   applyStoreLogo();
+
   updateCartUI();
 
   await loadSettings();
+
   await loadProducts();
+
   await checkSession();
+
 });
 
+
 // ==========================================
-// 4. SISTEMA DE LOGOTIPO
+// 5. SISTEMA DE LOGOTIPO
 // ==========================================
 
 function applyStoreLogo(logoUrl = null) {
+
   const logo = document.getElementById('header-logo');
 
-  if (!logo) {
-    console.error('Elemento header-logo não encontrado no HTML.');
-    return;
-  }
+  if (!logo) return;
 
   const defaultLogo = './logo.png';
 
   logo.onerror = function () {
-    console.error('Não foi possível carregar o logotipo:', this.src);
 
     if (this.src !== new URL(defaultLogo, window.location.href).href) {
       this.src = defaultLogo;
     } else {
       this.style.display = 'none';
     }
+
   };
 
   logo.onload = function () {
@@ -79,13 +124,16 @@ function applyStoreLogo(logoUrl = null) {
   };
 
   logo.src = logoUrl || defaultLogo;
+
 }
 
+
 // ==========================================
-// 5. CARREGAMENTO DAS CONFIGURAÇÕES
+// 6. CARREGAR CONFIGURAÇÕES
 // ==========================================
 
 async function loadSettings() {
+
   const { data, error } = await supabaseClient
     .from('store_settings')
     .select('*')
@@ -93,12 +141,16 @@ async function loadSettings() {
     .single();
 
   if (error) {
+
     console.error('Erro ao carregar configurações:', error);
+
     applyStoreLogo();
+
     return;
   }
 
   if (data) {
+
     storeSettings = {
       ...storeSettings,
       ...data
@@ -112,17 +164,24 @@ async function loadSettings() {
     const hours = document.getElementById('set-hours');
 
     if (pix) pix.value = data.pix_code || '';
+
     if (whatsapp) whatsapp.value = data.whatsapp || '';
+
     if (address) address.value = data.address || '';
+
     if (hours) hours.value = data.hours || '';
+
   }
+
 }
 
+
 // ==========================================
-// 6. CARREGAMENTO DOS PRODUTOS
+// 7. CARREGAR PRODUTOS
 // ==========================================
 
 async function loadProducts() {
+
   const { data, error } = await supabaseClient
     .from('products')
     .select('*')
@@ -130,25 +189,31 @@ async function loadProducts() {
     .order('category', { ascending: true });
 
   if (error) {
+
     console.error('Erro ao carregar produtos:', error);
+
     return;
   }
 
   allProducts = data || [];
 
   renderProducts();
+
   renderAdminProducts();
+
 }
 
+
 // ==========================================
-// 7. VITRINE, BUSCA E FILTROS
+// 8. CATEGORIAS E PESQUISA
 // ==========================================
 
 function setCategory(cat, btnElement) {
+
   currentCategory = cat;
 
-  document.querySelectorAll('.cat-btn').forEach(b => {
-    b.classList.remove('active');
+  document.querySelectorAll('.cat-btn').forEach(button => {
+    button.classList.remove('active');
   });
 
   if (btnElement) {
@@ -156,104 +221,138 @@ function setCategory(cat, btnElement) {
   }
 
   filterProducts();
+
 }
 
+
 function filterProducts() {
+
   const searchInput = document.getElementById('search-input');
 
   const term = searchInput
-    ? searchInput.value.toLowerCase()
+    ? searchInput.value.toLowerCase().trim()
     : '';
 
-  const filtered = allProducts.filter(p => {
-    if (!p.is_active) return false;
+  const filtered = allProducts.filter(product => {
+
+    if (!product.is_active) return false;
 
     const matchesSearch =
-      (p.name || '').toLowerCase().includes(term) ||
-      (p.category || '').toLowerCase().includes(term) ||
-      (p.description || '').toLowerCase().includes(term);
+      (product.name || '').toLowerCase().includes(term) ||
+      (product.category || '').toLowerCase().includes(term) ||
+      (product.description || '').toLowerCase().includes(term);
 
     if (currentCategory === 'Todos') {
       return matchesSearch;
     }
 
     if (currentCategory === 'Destaques') {
-      return matchesSearch && p.is_featured;
+      return matchesSearch && product.is_featured;
     }
 
     return matchesSearch &&
-      (p.category || '').toLowerCase() === currentCategory.toLowerCase();
+      (product.category || '').toLowerCase() ===
+      currentCategory.toLowerCase();
+
   });
 
   renderProducts(filtered);
+
 }
 
+
+// ==========================================
+// 9. RENDERIZAR PRODUTOS
+// ==========================================
+
 function renderProducts(list = allProducts.filter(p => p.is_active)) {
+
   const grid = document.getElementById('products-grid');
 
   if (!grid) return;
 
   if (list.length === 0) {
-    grid.innerHTML =
-      '<p>Nenhum doce encontrado com esse filtro.</p>';
+
+    grid.innerHTML = '<p>Nenhum doce encontrado com esse filtro.</p>';
+
     return;
   }
 
   grid.innerHTML = list.map(prod => {
+
     const finalPrice = prod.promo_price
       ? prod.promo_price
       : prod.price;
 
     const imgHtml = prod.image_url
-      ? `<img src="${prod.image_url}" alt="${prod.name}" class="product-img">`
-      : `<div class="product-placeholder">🧁</div>`;
+      ? `<img src="${escapeHTML(prod.image_url)}" alt="${escapeHTML(prod.name)}" class="product-img">`
+      : '<div class="product-placeholder">🧁</div>';
 
     return `
+
       <div class="product-card">
+
         <div>
+
           ${imgHtml}
 
           <div class="product-info">
+
             <span class="product-tag">
-              ${prod.category}
-              ${prod.is_featured ? '• ⭐ Destaque' : ''}
+              ${escapeHTML(prod.category)}
+              ${prod.is_featured ? ' • ⭐ Destaque' : ''}
             </span>
 
-            <h3>${prod.name}</h3>
+            <h3>${escapeHTML(prod.name)}</h3>
 
             <p class="product-desc">
-              ${prod.description || 'Feito artesanalmente com ingredientes selecionados.'}
+              ${escapeHTML(prod.description || 'Feito artesanalmente com ingredientes selecionados.')}
             </p>
+
           </div>
+
         </div>
 
         <div class="product-bottom">
+
           <div class="price-box">
+
             ${prod.promo_price
-              ? `<span class="old-price">R$ ${Number(prod.price).toFixed(2).replace('.', ',')}</span>`
+              ? `<span class="old-price">${formatMoney(prod.price)}</span>`
               : ''}
 
             <span class="current-price">
-              R$ ${Number(finalPrice).toFixed(2).replace('.', ',')}
+              ${formatMoney(finalPrice)}
             </span>
+
           </div>
 
-          <button class="btn-primary"
-            onclick="addToCart('${prod.id}')">
+          <button
+            class="btn-primary"
+            onclick="addToCart('${escapeHTML(prod.id)}')">
+
             + Adicionar
+
           </button>
+
         </div>
+
       </div>
+
     `;
+
   }).join('');
+
 }
 
+
 // ==========================================
-// 8. CARRINHO
+// 10. CARRINHO
 // ==========================================
 
 function addToCart(productId) {
-  const prod = allProducts.find(p => p.id === productId);
+
+  const prod = allProducts.find(p => String(p.id) === String(productId));
 
   if (!prod) return;
 
@@ -264,21 +363,34 @@ function addToCart(productId) {
   const existing = cart.find(item => item.id === productId);
 
   if (existing) {
+
     existing.qty += 1;
+
   } else {
+
     cart.push({
+
       id: prod.id,
+
       name: `${prod.category} - ${prod.name}`,
-      price,
+
+      price: price,
+
       qty: 1
+
     });
+
   }
 
   updateCartUI();
+
   toggleCart(true);
+
 }
 
+
 function updateQty(index, delta) {
+
   if (!cart[index]) return;
 
   cart[index].qty += delta;
@@ -288,9 +400,12 @@ function updateQty(index, delta) {
   }
 
   updateCartUI();
+
 }
 
+
 function updateCartUI() {
+
   const count = cart.reduce(
     (sum, item) => sum + item.qty,
     0
@@ -302,192 +417,486 @@ function updateCartUI() {
   );
 
   const countElement = document.getElementById('cart-count');
+
   const totalElement = document.getElementById('cart-total');
+
   const container = document.getElementById('cart-items');
 
-  if (countElement) countElement.innerText = count;
+  if (countElement) {
+    countElement.innerText = count;
+  }
 
   if (totalElement) {
-    totalElement.innerText =
-      `R$ ${total.toFixed(2).replace('.', ',')}`;
+    totalElement.innerText = formatMoney(total);
   }
 
   if (!container) return;
 
   if (cart.length === 0) {
-    container.innerHTML =
-      '<p style="color:#6e627d;text-align:center;margin-top:20px;">Seu carrinho está vazio.</p>';
+
+    container.innerHTML = `
+      <p style="color:#6e627d;text-align:center;margin-top:20px;">
+        Seu carrinho está vazio.
+      </p>
+    `;
+
     return;
   }
 
   container.innerHTML = cart.map((item, idx) => `
+
     <div class="cart-item">
+
       <div>
-        <strong>${item.name}</strong><br>
+
+        <strong>${escapeHTML(item.name)}</strong>
+
+        <br>
+
         <small>
-          R$ ${(item.price * item.qty).toFixed(2).replace('.', ',')}
+          ${formatMoney(item.price * item.qty)}
         </small>
+
       </div>
 
       <div class="qty-controls">
+
         <button onclick="updateQty(${idx}, -1)">-</button>
+
         <span>${item.qty}</span>
+
         <button onclick="updateQty(${idx}, 1)">+</button>
+
       </div>
+
     </div>
+
   `).join('');
+
 }
 
+
 function toggleCart(forceOpen = null) {
+
   const drawer = document.getElementById('cart-drawer');
 
   if (!drawer) return;
 
   if (forceOpen === true) {
+
     drawer.classList.remove('hidden');
+
   } else if (forceOpen === false) {
+
     drawer.classList.add('hidden');
+
   } else {
+
     drawer.classList.toggle('hidden');
+
   }
+
 }
 
+
 // ==========================================
-// 9. FINALIZAÇÃO DE PEDIDOS
+// 11. WHATSAPP - MONTAR MENSAGEM
+// ==========================================
+
+function createOrderWhatsAppMessage(order, items) {
+
+  const itemsText = items.map(item => {
+
+    return `• ${item.qty}x ${item.name} — ${formatMoney(item.price * item.qty)}`;
+
+  }).join('\n');
+
+  return (
+
+    `🍰 *NOVO PEDIDO - DOCES DA FLA*\n\n` +
+
+    `*Pedido:* ${order.id}\n` +
+
+    `*Cliente:* ${order.customer_name}\n` +
+
+    `*WhatsApp do cliente:* ${order.customer_phone}\n\n` +
+
+    `*PRODUTOS:*\n${itemsText}\n\n` +
+
+    `*TOTAL: ${formatMoney(order.total_amount)}*\n\n` +
+
+    `*Pagamento:* ${order.payment_method}\n` +
+
+    (order.payment_method === 'PIX'
+      ? '*Situação: aguardando confirmação do pagamento.*\n'
+      : '') +
+
+    (order.notes
+      ? `*Observações:* ${order.notes}\n`
+      : '') +
+
+    `\nPedido realizado pelo site Doces da Fla.`
+
+  );
+
+}
+
+
+// ==========================================
+// 12. FINALIZAR PEDIDO
 // ==========================================
 
 async function submitOrder(e) {
+
   e.preventDefault();
 
+  const form = e.currentTarget;
+
+  if (form.dataset.submitting === 'true') return;
+
   if (cart.length === 0) {
+
     alert('Adicione pelo menos um doce ao carrinho.');
+
     return;
   }
 
-  const name = document.getElementById('cust-name').value.trim();
+  const name = document
+    .getElementById('cust-name')
+    .value.trim();
 
   const phone = document
     .getElementById('cust-phone')
     .value.replace(/\D/g, '');
 
-  const paymentMethod =
-    document.getElementById('pay-method').value;
+  const paymentMethod = document
+    .getElementById('pay-method')
+    .value;
 
-  const notes =
-    document.getElementById('order-notes').value.trim();
+  const notes = document
+    .getElementById('order-notes')
+    .value.trim();
 
-  const totalAmount = cart.reduce(
+  if (!name || !phone) {
+
+    alert('Preencha seu nome e WhatsApp.');
+
+    return;
+  }
+
+  const orderItems = cart.map(item => ({
+    ...item
+  }));
+
+  const totalAmount = orderItems.reduce(
     (sum, item) => sum + item.price * item.qty,
     0
   );
 
-  const { data, error } = await supabaseClient
-    .from('orders')
-    .insert([{
-      customer_name: name,
-      customer_phone: phone,
-      items: cart,
-      total_amount: totalAmount,
-      payment_method: paymentMethod,
-      notes: notes,
-      status: paymentMethod === 'PIX'
-        ? 'Aguardando pagamento'
-        : 'Recebido'
-    }])
-    .select()
-    .single();
+  const submitButton = form.querySelector(
+    'button[type="submit"]'
+  );
 
-  if (error) {
-    alert('Erro ao registrar pedido. Tente novamente.');
-    console.error(error);
+  const originalText = submitButton
+    ? submitButton.innerText
+    : '';
+
+  form.dataset.submitting = 'true';
+
+  if (submitButton) {
+
+    submitButton.disabled = true;
+
+    submitButton.innerText = 'Registrando pedido...';
+
+  }
+
+  // Abre uma janela durante o clique original do cliente.
+  // Assim reduzimos o risco de bloqueio de pop-ups após
+  // a resposta assíncrona do Supabase.
+
+  let whatsappWindow = null;
+
+  try {
+
+    whatsappWindow = window.open('about:blank', '_blank');
+
+    // REGISTRAR NO SUPABASE
+
+    const { data, error } = await supabaseClient
+      .from('orders')
+      .insert([{
+
+        customer_name: name,
+
+        customer_phone: phone,
+
+        items: orderItems,
+
+        total_amount: totalAmount,
+
+        payment_method: paymentMethod,
+
+        notes: notes,
+
+        status: paymentMethod === 'PIX'
+          ? 'Aguardando pagamento'
+          : 'Recebido'
+
+      }])
+      .select()
+      .single();
+
+    if (error) {
+
+      if (whatsappWindow && !whatsappWindow.closed) {
+        whatsappWindow.close();
+      }
+
+      console.error('Erro ao registrar pedido:', error);
+
+      alert('Erro ao registrar pedido: ' + error.message);
+
+      return;
+    }
+
+    // PREPARAR WHATSAPP DA RESPONSÁVEL
+
+    const whatsappNumber = normalizeWhatsApp(
+      storeSettings.whatsapp
+    );
+
+    const waMessage = createOrderWhatsAppMessage(
+      data,
+      orderItems
+    );
+
+    const whatsappUrl = whatsappNumber
+      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waMessage)}`
+      : null;
+
+    // CONFIGURAR BOTÃO ALTERNATIVO
+
+    const whatsappButton = document.getElementById(
+      'whatsapp-confirm-btn'
+    );
+
+    if (whatsappButton) {
+
+      whatsappButton.href = whatsappUrl || '#';
+
+      whatsappButton.innerText = whatsappUrl
+        ? '💬 Abrir WhatsApp novamente'
+        : 'WhatsApp não configurado';
+
+      whatsappButton.style.display = whatsappUrl
+        ? 'block'
+        : 'none';
+
+    }
+
+    // ABRIR WHATSAPP AUTOMATICAMENTE
+
+    if (whatsappUrl && whatsappWindow && !whatsappWindow.closed) {
+
+      whatsappWindow.location.href = whatsappUrl;
+
+    } else if (whatsappWindow && !whatsappWindow.closed) {
+
+      whatsappWindow.close();
+
+    }
+
+    // CONFIRMAÇÃO DO PEDIDO
+
+    const confirmMessage = document.getElementById(
+      'order-confirm-msg'
+    );
+
+    if (confirmMessage) {
+
+      confirmMessage.innerText =
+        `Obrigado, ${name}! Seu pedido foi registrado com sucesso. Total: ${formatMoney(totalAmount)}.`;
+
+    }
+
+    // CONFIGURAÇÃO DO PIX
+
+    const pixBox = document.getElementById('pix-payment-box');
+
+    if (paymentMethod === 'PIX') {
+
+      pixBox.classList.remove('hidden');
+
+      document.getElementById('pix-copy-text').value =
+        storeSettings.pix_code || '';
+
+      const qrDiv = document.getElementById(
+        'qrcode-container'
+      );
+
+      qrDiv.innerHTML = '';
+
+      if (window.QRCode && storeSettings.pix_code) {
+
+        new QRCode(qrDiv, {
+
+          text: storeSettings.pix_code,
+
+          width: 160,
+
+          height: 160
+
+        });
+
+      }
+
+    } else {
+
+      pixBox.classList.add('hidden');
+
+    }
+
+    // LIMPAR CARRINHO
+
+    cart = [];
+
+    updateCartUI();
+
+    toggleCart(false);
+
+    // ABRIR MODAL DE CONFIRMAÇÃO
+
+    document.getElementById('pix-modal')
+      .classList.remove('hidden');
+
+    if (!whatsappUrl) {
+
+      alert(
+        'Pedido registrado, mas o WhatsApp da loja não está configurado.'
+      );
+
+    }
+
+  } catch (error) {
+
+    console.error('Erro ao finalizar pedido:', error);
+
+    if (whatsappWindow && !whatsappWindow.closed) {
+      whatsappWindow.close();
+    }
+
+    alert('Ocorreu um erro ao finalizar o pedido.');
+
+  } finally {
+
+    form.dataset.submitting = 'false';
+
+    if (submitButton) {
+
+      submitButton.disabled = false;
+
+      submitButton.innerText = originalText;
+
+    }
+
+  }
+
+}
+
+
+// ==========================================
+// 13. COPIAR PIX
+// ==========================================
+
+function copyPixCode() {
+
+  const copyText = document.getElementById('pix-copy-text');
+
+  if (!copyText || !copyText.value) {
+
+    alert('Código PIX não disponível.');
+
     return;
   }
 
-  const itemsText = cart.map(i =>
-    `• ${i.qty}x ${i.name} (R$ ${(i.price * i.qty).toFixed(2)})`
-  ).join('\n');
-
-  const waMessage = encodeURIComponent(
-    `Olá, *Doces da Fla*! Acabei de fazer um pedido pelo site:\n\n` +
-    `*Cliente:* ${name}\n` +
-    `*Itens:*\n${itemsText}\n\n` +
-    `*Total:* R$ ${totalAmount.toFixed(2).replace('.', ',')}\n` +
-    `*Pagamento:* ${paymentMethod}\n` +
-    (notes ? `*Obs:* ${notes}\n` : '') +
-    `\nAguardo a confirmação para retirada!`
-  );
-
-  document.getElementById('whatsapp-confirm-btn').href =
-    `https://wa.me/${storeSettings.whatsapp}?text=${waMessage}`;
-
-  document.getElementById('order-confirm-msg').innerText =
-    `Obrigado, ${name}! Seu pedido de R$ ${totalAmount.toFixed(2).replace('.', ',')} foi salvo.`;
-
-  const pixBox = document.getElementById('pix-payment-box');
-
-  if (paymentMethod === 'PIX') {
-    pixBox.classList.remove('hidden');
-
-    document.getElementById('pix-copy-text').value =
-      storeSettings.pix_code;
-
-    const qrDiv = document.getElementById('qrcode-container');
-
-    qrDiv.innerHTML = '';
-
-    new QRCode(qrDiv, {
-      text: storeSettings.pix_code,
-      width: 160,
-      height: 160
-    });
-  } else {
-    pixBox.classList.add('hidden');
-  }
-
-  cart = [];
-
-  updateCartUI();
-  toggleCart(false);
-
-  document.getElementById('pix-modal').classList.remove('hidden');
-}
-
-function copyPixCode() {
-  const copyText = document.getElementById('pix-copy-text');
-
   copyText.select();
 
-  navigator.clipboard.writeText(copyText.value)
-    .then(() => {
-      alert('Código PIX copiado! Agora cole no aplicativo do seu banco.');
-    })
-    .catch(() => {
-      alert('Não foi possível copiar automaticamente. Selecione e copie o código.');
-    });
+  if (navigator.clipboard && window.isSecureContext) {
+
+    navigator.clipboard.writeText(copyText.value)
+      .then(() => {
+
+        alert('Código PIX copiado! Cole no aplicativo do seu banco.');
+
+      })
+      .catch(() => {
+
+        alert('Não foi possível copiar automaticamente. Selecione e copie o código.');
+
+      });
+
+  } else {
+
+    try {
+
+      document.execCommand('copy');
+
+      alert('Código PIX copiado!');
+
+    } catch (error) {
+
+      alert('Selecione e copie o código PIX manualmente.');
+
+    }
+
+  }
+
 }
+
 
 function closePixModal() {
-  document.getElementById('pix-modal').classList.add('hidden');
+
+  document.getElementById('pix-modal')
+    .classList.add('hidden');
+
 }
 
+
 // ==========================================
-// 10. ACOMPANHAMENTO DE PEDIDOS
+// 14. ACOMPANHAMENTO DE PEDIDOS
 // ==========================================
 
 function openTrackModal() {
-  document.getElementById('track-modal').classList.remove('hidden');
+
+  document.getElementById('track-modal')
+    .classList.remove('hidden');
+
 }
+
 
 function closeTrackModal() {
-  document.getElementById('track-modal').classList.add('hidden');
+
+  document.getElementById('track-modal')
+    .classList.add('hidden');
+
 }
 
+
 async function trackOrders() {
+
   const phone = document
     .getElementById('track-phone-input')
     .value.replace(/\D/g, '');
 
-  if (!phone) return;
+  const container = document.getElementById('track-results');
+
+  if (!phone) {
+
+    alert('Digite seu WhatsApp.');
+
+    return;
+  }
 
   const { data, error } = await supabaseClient
     .from('orders')
@@ -495,48 +904,65 @@ async function trackOrders() {
     .eq('customer_phone', phone)
     .order('created_at', { ascending: false });
 
-  const container = document.getElementById('track-results');
-
   if (error) {
+
     console.error(error);
+
     container.innerHTML = '<p>Erro ao consultar pedidos.</p>';
+
     return;
   }
 
   if (!data || data.length === 0) {
+
     container.innerHTML =
       '<p>Nenhum pedido encontrado para este número.</p>';
+
     return;
   }
 
-  container.innerHTML = data.map(o => `
+  container.innerHTML = data.map(order => `
+
     <div class="order-card">
+
       <div class="order-top">
+
         <strong>
-          ${new Date(o.created_at).toLocaleDateString('pt-BR')}
+          ${new Date(order.created_at).toLocaleDateString('pt-BR')}
         </strong>
-        <span class="status-badge">${o.status}</span>
+
+        <span class="status-badge">
+          ${escapeHTML(order.status)}
+        </span>
+
       </div>
 
       <p>
         <small>
-          ${o.items.map(i => `${i.qty}x ${i.name}`).join(', ')}
+          ${(order.items || []).map(item =>
+            `${item.qty}x ${escapeHTML(item.name)}`
+          ).join(', ')}
         </small>
       </p>
 
       <strong>
-        Total: R$ ${Number(o.total_amount).toFixed(2).replace('.', ',')}
-        (${o.payment_method})
+        Total: ${formatMoney(order.total_amount)}
+        (${escapeHTML(order.payment_method)})
       </strong>
+
     </div>
+
   `).join('');
+
 }
 
+
 // ==========================================
-// 11. ÁREA ADMINISTRATIVA
+// 15. NAVEGAÇÃO
 // ==========================================
 
 function showView(view) {
+
   document.getElementById('store-view')
     .classList.toggle('hidden', view !== 'store');
 
@@ -544,20 +970,32 @@ function showView(view) {
     .classList.toggle('hidden', view !== 'admin');
 
   if (view === 'admin') {
+
     checkSession();
+
   }
+
 }
 
+
+// ==========================================
+// 16. SESSÃO ADMINISTRATIVA
+// ==========================================
+
 async function checkSession() {
+
   const { data: { session }, error } =
     await supabaseClient.auth.getSession();
 
   if (error) {
+
     console.error(error);
+
     return;
   }
 
   if (session) {
+
     document.getElementById('admin-login-box')
       .classList.add('hidden');
 
@@ -568,123 +1006,215 @@ async function checkSession() {
       `Logado como: ${session.user.email}`;
 
     loadAdminData();
+
   } else {
+
     document.getElementById('admin-login-box')
       .classList.remove('hidden');
 
     document.getElementById('admin-dashboard')
       .classList.add('hidden');
+
   }
+
 }
+
+
+// ==========================================
+// 17. LOGIN
+// ==========================================
 
 async function handleLogin(e) {
+
   e.preventDefault();
 
-  const email =
-    document.getElementById('admin-email').value;
+  const email = document
+    .getElementById('admin-email')
+    .value;
 
-  const password =
-    document.getElementById('admin-password').value;
+  const password = document
+    .getElementById('admin-password')
+    .value;
 
   const { error } = await supabaseClient.auth
-    .signInWithPassword({ email, password });
+    .signInWithPassword({
+
+      email,
+
+      password
+
+    });
 
   if (error) {
+
     alert('E-mail ou senha inválidos.');
+
   } else {
-    checkSession();
+
+    await checkSession();
+
   }
+
 }
+
+
+// ==========================================
+// 18. SAIR DO PAINEL
+// ==========================================
 
 async function handleLogout() {
-  await supabaseClient.auth.signOut();
-  checkSession();
+
+  const { error } = await supabaseClient.auth.signOut();
+
+  if (error) {
+
+    alert('Erro ao sair da conta.');
+
+    console.error(error);
+
+    return;
+  }
+
+  await checkSession();
+
 }
 
+
+// ==========================================
+// 19. ABAS ADMINISTRATIVAS
+// ==========================================
+
 function switchAdminTab(tabName, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    b.classList.remove('active');
+
+  document.querySelectorAll('.tab-btn').forEach(button => {
+
+    button.classList.remove('active');
+
   });
 
   btn.classList.add('active');
 
-  document.querySelectorAll('.admin-tab-content').forEach(c => {
-    c.classList.add('hidden');
+  document.querySelectorAll('.admin-tab-content').forEach(content => {
+
+    content.classList.add('hidden');
+
   });
 
   document.getElementById(`tab-${tabName}`)
     .classList.remove('hidden');
+
 }
 
+
 // ==========================================
-// 12. PAINEL DE GESTÃO
+// 20. PAINEL DE GESTÃO
 // ==========================================
 
 async function loadAdminData() {
+
   const { data: orders, error } = await supabaseClient
     .from('orders')
     .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
+
     console.error('Erro ao carregar pedidos:', error);
+
     return;
   }
 
   if (!orders) return;
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const monthStr = new Date().toISOString().slice(0, 7);
+  const todayStr = new Date().toLocaleDateString('en-CA');
+
+  const monthStr = todayStr.slice(0, 7);
 
   let revToday = 0;
+
   let revMonth = 0;
+
   let pendingCount = 0;
 
   const itemCounter = {};
+
   const customersMap = {};
 
-  orders.forEach(o => {
-    const isCanceled = o.status === 'Cancelado';
+  orders.forEach(order => {
+
+    const isCanceled = order.status === 'Cancelado';
+
+    const orderDate = new Date(order.created_at)
+      .toLocaleDateString('en-CA');
 
     if (!isCanceled) {
-      if (o.created_at.startsWith(todayStr)) {
-        revToday += Number(o.total_amount);
+
+      if (orderDate === todayStr) {
+
+        revToday += Number(order.total_amount);
+
       }
 
-      if (o.created_at.startsWith(monthStr)) {
-        revMonth += Number(o.total_amount);
+      if (orderDate.slice(0, 7) === monthStr) {
+
+        revMonth += Number(order.total_amount);
+
       }
 
-      (o.items || []).forEach(i => {
-        itemCounter[i.name] =
-          (itemCounter[i.name] || 0) + i.qty;
+      (order.items || []).forEach(item => {
+
+        itemCounter[item.name] =
+          (itemCounter[item.name] || 0) + item.qty;
+
       });
+
     }
 
     if ([
+
       'Recebido',
+
       'Aguardando pagamento',
+
+      'Pagamento confirmado',
+
       'Em preparação'
-    ].includes(o.status)) {
+
+    ].includes(order.status)) {
+
       pendingCount++;
+
     }
 
-    if (!customersMap[o.customer_phone]) {
-      customersMap[o.customer_phone] = {
-        name: o.customer_name,
-        phone: o.customer_phone,
+    if (!customersMap[order.customer_phone]) {
+
+      customersMap[order.customer_phone] = {
+
+        name: order.customer_name,
+
+        phone: order.customer_phone,
+
         count: 0,
+
         total: 0
+
       };
+
     }
 
-    customersMap[o.customer_phone].count++;
+    customersMap[order.customer_phone].count++;
 
     if (!isCanceled) {
-      customersMap[o.customer_phone].total +=
-        Number(o.total_amount);
+
+      customersMap[order.customer_phone].total +=
+        Number(order.total_amount);
+
     }
+
   });
+
+
+  // PRODUTO MAIS VENDIDO
 
   const sortedItems = Object.entries(itemCounter)
     .sort((a, b) => b[1] - a[1]);
@@ -693,11 +1223,14 @@ async function loadAdminData() {
     ? sortedItems[0]
     : null;
 
+
+  // INDICADORES
+
   document.getElementById('metric-today').innerText =
-    `R$ ${revToday.toFixed(2).replace('.', ',')}`;
+    formatMoney(revToday);
 
   document.getElementById('metric-month').innerText =
-    `R$ ${revMonth.toFixed(2).replace('.', ',')}`;
+    formatMoney(revMonth);
 
   document.getElementById('metric-pending').innerText =
     pendingCount;
@@ -705,106 +1238,193 @@ async function loadAdminData() {
   document.getElementById('metric-top').innerText =
     topItem ? `${topItem[0]} (${topItem[1]}x)` : '-';
 
-  document.getElementById('admin-orders-list').innerHTML =
-    orders.map(o => `
-      <div class="order-card">
-        <div class="order-top">
-          <div>
-            <strong>${o.customer_name}</strong>
-            (${o.customer_phone})<br>
 
-            <small>
-              ${new Date(o.created_at).toLocaleString('pt-BR')}
-              • Pagamento: <b>${o.payment_method}</b>
-            </small>
+  // LISTA DE PEDIDOS
+
+  document.getElementById('admin-orders-list').innerHTML =
+    orders.map(order => {
+
+      const customerPhone = String(order.customer_phone || '');
+
+      const customerWhatsApp = normalizeWhatsApp(customerPhone);
+
+      const customerMessage = encodeURIComponent(
+        `Olá ${order.customer_name}! Aqui é da Doces da Fla. O status do seu pedido agora é: ${order.status}.`
+      );
+
+      return `
+
+        <div class="order-card">
+
+          <div class="order-top">
+
+            <div>
+
+              <strong>${escapeHTML(order.customer_name)}</strong>
+
+              (${escapeHTML(order.customer_phone)})
+
+              <br>
+
+              <small>
+
+                ${new Date(order.created_at).toLocaleString('pt-BR')}
+
+                • Pagamento: <b>${escapeHTML(order.payment_method)}</b>
+
+              </small>
+
+            </div>
+
+            <select
+              onchange="updateOrderStatus('${escapeHTML(order.id)}', this.value)"
+              style="width:auto;"
+            >
+
+              ${ORDER_STATUSES.map(status => `
+
+                <option
+                  value="${escapeHTML(status)}"
+                  ${order.status === status ? 'selected' : ''}
+                >
+
+                  ${escapeHTML(status)}
+
+                </option>
+
+              `).join('')}
+
+            </select>
+
           </div>
 
-          <select
-            onchange="updateOrderStatus('${o.id}', this.value)"
-            style="width:auto;"
-          >
-            ${ORDER_STATUSES.map(st => `
-              <option value="${st}"
-                ${o.status === st ? 'selected' : ''}>
-                ${st}
-              </option>
-            `).join('')}
-          </select>
+          <p style="margin:8px 0;">
+
+            ${(order.items || []).map(item =>
+              `• ${item.qty}x ${escapeHTML(item.name)}`
+            ).join('<br>')}
+
+          </p>
+
+          ${order.notes
+            ? `<p><small><b>Obs:</b> ${escapeHTML(order.notes)}</small></p>`
+            : ''}
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-top:10px;
+            gap:10px;
+            flex-wrap:wrap;
+          ">
+
+            <strong>
+              Total: ${formatMoney(order.total_amount)}
+            </strong>
+
+            ${customerWhatsApp ? `
+
+              <a
+                href="https://wa.me/${customerWhatsApp}?text=${customerMessage}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn-secondary"
+              >
+
+                Avisar no WhatsApp
+
+              </a>
+
+            ` : ''}
+
+          </div>
+
         </div>
 
-        <p style="margin:8px 0;">
-          ${(o.items || []).map(i =>
-            `• ${i.qty}x ${i.name}`
-          ).join('<br>')}
-        </p>
+      `;
 
-        ${o.notes
-          ? `<p><small><b>Obs:</b> ${o.notes}</small></p>`
-          : ''}
+    }).join('');
 
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          margin-top:10px;
-        ">
-          <strong>
-            Total: R$ ${Number(o.total_amount).toFixed(2).replace('.', ',')}
-          </strong>
 
-          <a
-            href="https://wa.me/${o.customer_phone.startsWith('55') ? o.customer_phone : '55' + o.customer_phone}?text=${encodeURIComponent(`Olá ${o.customer_name}! Aqui é da Doces da Fla. O status do seu pedido agora é: *${o.status}*.`)}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn-secondary"
-          >
-            Avisar no WhatsApp
-          </a>
-        </div>
-      </div>
-    `).join('');
+  // HISTÓRICO DE CLIENTES
 
   document.getElementById('admin-customers-list').innerHTML =
-    Object.values(customersMap).map(c => `
+    Object.values(customersMap).map(customer => `
+
       <div class="admin-prod-item">
+
         <div>
-          <strong>${c.name}</strong><br>
+
+          <strong>${escapeHTML(customer.name)}</strong>
+
+          <br>
+
           <small>
-            WhatsApp: ${c.phone} • ${c.count} pedido(s)
+
+            WhatsApp: ${escapeHTML(customer.phone)}
+
+            • ${customer.count} pedido(s)
+
           </small>
+
         </div>
 
         <strong>
-          R$ ${c.total.toFixed(2).replace('.', ',')}
+
+          ${formatMoney(customer.total)}
+
         </strong>
+
       </div>
+
     `).join('');
+
 }
 
+
 // ==========================================
-// 13. ATUALIZAR STATUS DO PEDIDO
+// 21. ATUALIZAR STATUS
 // ==========================================
 
 async function updateOrderStatus(orderId, newStatus) {
+
+  if (!ORDER_STATUSES.includes(newStatus)) {
+
+    alert('Status inválido.');
+
+    return;
+  }
+
   const { error } = await supabaseClient
     .from('orders')
-    .update({ status: newStatus })
+    .update({
+
+      status: newStatus
+
+    })
     .eq('id', orderId);
 
   if (error) {
+
     console.error(error);
+
     alert('Erro ao atualizar status do pedido.');
+
     return;
   }
 
   await loadAdminData();
+
 }
 
+
 // ==========================================
-// 14. REGISTRAR VENDA POR FORA
+// 22. REGISTRAR VENDA POR FORA
 // ==========================================
 
 async function registrarVendaPorFora() {
+
   const valorTexto = prompt(
     'Qual o valor da venda? (Ex: 25,50)'
   );
@@ -814,48 +1434,68 @@ async function registrarVendaPorFora() {
   const valor = Number(valorTexto.replace(',', '.'));
 
   if (!Number.isFinite(valor) || valor <= 0) {
+
     alert('Digite um valor válido.');
+
     return;
   }
 
-  const descricao =
-    prompt('Qual doce ou nome do cliente?') ||
-    'Venda por fora';
+  const descricao = prompt(
+    'Qual doce ou nome do cliente?'
+  ) || 'Venda por fora';
 
   const { error } = await supabaseClient
     .from('orders')
     .insert([{
+
       customer_name: `${descricao} (Por fora)`,
+
       customer_phone: '00000000000',
+
       items: [{
+
         name: descricao,
+
         qty: 1,
+
         price: valor
+
       }],
+
       total_amount: valor,
+
       payment_method: 'Externo',
+
       notes: 'Venda registrada manualmente',
+
       status: 'Entregue'
+
     }]);
 
   if (error) {
+
     console.error('Erro ao registrar venda:', error);
+
     alert('Erro ao salvar venda: ' + error.message);
+
     return;
   }
 
   alert(
-    `Venda de R$ ${valor.toFixed(2).replace('.', ',')} registrada!`
+    `Venda de ${formatMoney(valor)} registrada!`
   );
 
   await loadAdminData();
+
 }
 
+
 // ==========================================
-// 15. UPLOAD DE IMAGENS
+// 23. UPLOAD DE IMAGENS
 // ==========================================
 
 async function uploadImage(file) {
+
   if (!file) return null;
 
   const fileName =
@@ -867,8 +1507,11 @@ async function uploadImage(file) {
     .upload(fileName, file);
 
   if (error) {
+
     console.error('Erro no upload:', error);
+
     alert('Erro ao enviar imagem: ' + error.message);
+
     return null;
   }
 
@@ -878,60 +1521,83 @@ async function uploadImage(file) {
     .getPublicUrl(fileName);
 
   return data.publicUrl;
+
 }
 
+
 // ==========================================
-// 16. SALVAR PRODUTOS
+// 24. SALVAR PRODUTOS
 // ==========================================
 
 async function saveProduct(e) {
+
   e.preventDefault();
 
   const id = document.getElementById('prod-id').value;
+
   const fileInput = document.getElementById('prod-image');
 
   let imageUrl = null;
 
   if (fileInput.files.length > 0) {
+
     imageUrl = await uploadImage(fileInput.files[0]);
 
     if (!imageUrl) return;
+
   }
 
   const payload = {
-    name: document.getElementById('prod-name').value,
-    category: document.getElementById('prod-category').value,
+
+    name: document.getElementById('prod-name').value.trim(),
+
+    category: document.getElementById('prod-category').value.trim(),
+
     price: parseFloat(
       document.getElementById('prod-price').value
     ),
+
     promo_price: document.getElementById('prod-promo').value
       ? parseFloat(document.getElementById('prod-promo').value)
       : null,
+
     description: document.getElementById('prod-desc').value,
+
     is_featured: document.getElementById('prod-featured').checked,
+
     is_active: document.getElementById('prod-active').checked
+
   };
 
   if (imageUrl) {
+
     payload.image_url = imageUrl;
+
   }
 
   let result;
 
   if (id) {
+
     result = await supabaseClient
       .from('products')
       .update(payload)
       .eq('id', id);
+
   } else {
+
     result = await supabaseClient
       .from('products')
       .insert([payload]);
+
   }
 
   if (result.error) {
+
     console.error(result.error);
+
     alert('Erro ao salvar produto: ' + result.error.message);
+
     return;
   }
 
@@ -940,48 +1606,66 @@ async function saveProduct(e) {
   await loadProducts();
 
   alert('Produto salvo com sucesso!');
+
 }
 
+
 // ==========================================
-// 17. EDITAR PRODUTOS
+// 25. EDITAR PRODUTOS
 // ==========================================
 
 function editProduct(id) {
-  const p = allProducts.find(item => item.id === id);
 
-  if (!p) return;
+  const product = allProducts.find(
+    item => String(item.id) === String(id)
+  );
+
+  if (!product) return;
 
   document.getElementById('product-form-title').innerText =
     'Editar Doce';
 
-  document.getElementById('prod-id').value = p.id;
-  document.getElementById('prod-name').value = p.name;
-  document.getElementById('prod-category').value = p.category;
-  document.getElementById('prod-price').value = p.price;
+  document.getElementById('prod-id').value = product.id;
+
+  document.getElementById('prod-name').value = product.name;
+
+  document.getElementById('prod-category').value =
+    product.category;
+
+  document.getElementById('prod-price').value =
+    product.price;
+
   document.getElementById('prod-promo').value =
-    p.promo_price || '';
+    product.promo_price || '';
 
   document.getElementById('prod-desc').value =
-    p.description || '';
+    product.description || '';
 
   document.getElementById('prod-featured').checked =
-    p.is_featured;
+    product.is_featured;
 
   document.getElementById('prod-active').checked =
-    p.is_active;
+    product.is_active;
 
   window.scrollTo({
+
     top: 0,
+
     behavior: 'smooth'
+
   });
+
 }
 
+
 // ==========================================
-// 18. EXCLUIR PRODUTOS
+// 26. EXCLUIR PRODUTOS
 // ==========================================
 
 async function deleteProduct(id) {
+
   if (!confirm('Tem certeza que deseja excluir este doce?')) {
+
     return;
   }
 
@@ -991,111 +1675,162 @@ async function deleteProduct(id) {
     .eq('id', id);
 
   if (error) {
+
     console.error(error);
+
     alert('Erro ao excluir produto.');
+
     return;
   }
 
   await loadProducts();
+
+  alert('Produto excluído com sucesso!');
+
 }
 
+
 // ==========================================
-// 19. LIMPAR FORMULÁRIO DE PRODUTOS
+// 27. LIMPAR FORMULÁRIO DE PRODUTOS
 // ==========================================
 
 function resetProductForm() {
+
   document.getElementById('product-form-title').innerText =
     'Adicionar Novo Doce';
 
   document.getElementById('prod-id').value = '';
+
   document.getElementById('prod-name').value = '';
+
   document.getElementById('prod-category').value = '';
+
   document.getElementById('prod-price').value = '';
+
   document.getElementById('prod-promo').value = '';
+
   document.getElementById('prod-desc').value = '';
+
   document.getElementById('prod-image').value = '';
 
   document.getElementById('prod-featured').checked = false;
+
   document.getElementById('prod-active').checked = true;
+
 }
 
+
 // ==========================================
-// 20. LISTA ADMINISTRATIVA DE PRODUTOS
+// 28. LISTA ADMINISTRATIVA DE PRODUTOS
 // ==========================================
 
 function renderAdminProducts() {
-  const container =
-    document.getElementById('admin-products-list');
+
+  const container = document.getElementById(
+    'admin-products-list'
+  );
 
   if (!container) return;
 
-  container.innerHTML = allProducts.map(p => `
+  container.innerHTML = allProducts.map(product => `
+
     <div class="admin-prod-item">
+
       <div>
+
         <strong>
-          ${p.category} - ${p.name}
+
+          ${escapeHTML(product.category)} -
+          ${escapeHTML(product.name)}
+
         </strong>
 
-        ${!p.is_active ? '(Oculto)' : ''}<br>
+        ${!product.is_active ? '(Oculto)' : ''}
+
+        <br>
 
         <small>
-          R$ ${Number(p.price).toFixed(2)}
-          ${p.promo_price
-            ? `→ Promo: R$ ${Number(p.promo_price).toFixed(2)}`
+
+          ${formatMoney(product.price)}
+
+          ${product.promo_price
+            ? `→ Promo: ${formatMoney(product.promo_price)}`
             : ''}
+
         </small>
+
       </div>
 
       <div style="display:flex; gap:6px;">
+
         <button
           class="btn-secondary"
-          onclick="editProduct('${p.id}')"
+          onclick="editProduct('${escapeHTML(product.id)}')"
         >
+
           Editar
+
         </button>
 
         <button
           class="btn-danger"
-          onclick="deleteProduct('${p.id}')"
+          onclick="deleteProduct('${escapeHTML(product.id)}')"
         >
+
           Excluir
+
         </button>
+
       </div>
+
     </div>
+
   `).join('');
+
 }
 
+
 // ==========================================
-// 21. SALVAR CONFIGURAÇÕES DA LOJA E LOGOTIPO
+// 29. SALVAR CONFIGURAÇÕES DA LOJA
 // ==========================================
 
 async function saveSettings(e) {
+
   e.preventDefault();
 
-  const logoInput =
-    document.getElementById('set-logo');
+  const logoInput = document.getElementById('set-logo');
 
   let logoUrl = storeSettings.logo_url || null;
 
-  // Se um novo logo foi selecionado, envia ao Supabase
   if (logoInput.files.length > 0) {
-    const uploadedUrl =
-      await uploadImage(logoInput.files[0]);
+
+    const uploadedUrl = await uploadImage(
+      logoInput.files[0]
+    );
 
     if (!uploadedUrl) {
+
       alert('Não foi possível enviar o novo logotipo.');
+
       return;
     }
 
     logoUrl = uploadedUrl;
+
   }
 
   const updates = {
+
     logo_url: logoUrl,
-    pix_code: document.getElementById('set-pix').value,
-    whatsapp: document.getElementById('set-whatsapp').value,
-    address: document.getElementById('set-address').value,
-    hours: document.getElementById('set-hours').value
+
+    pix_code: document.getElementById('set-pix').value.trim(),
+
+    whatsapp: document.getElementById('set-whatsapp').value.trim(),
+
+    address: document.getElementById('set-address').value.trim(),
+
+    hours: document.getElementById('set-hours').value.trim()
+
   };
 
   const { error } = await supabaseClient
@@ -1104,8 +1839,11 @@ async function saveSettings(e) {
     .eq('id', 1);
 
   if (error) {
+
     console.error('Erro ao salvar configurações:', error);
+
     alert('Erro ao salvar configurações: ' + error.message);
+
     return;
   }
 
@@ -1114,5 +1852,12 @@ async function saveSettings(e) {
   logoInput.value = '';
 
   alert('Configurações atualizadas com sucesso!');
+
 }
+
+
+// ==========================================
+// FIM DO SISTEMA - DOCES DA FLA
+// ==========================================
+
 
